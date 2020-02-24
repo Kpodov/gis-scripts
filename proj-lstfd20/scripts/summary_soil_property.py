@@ -1,5 +1,21 @@
+import glob
+import os
 import gdal
 import osr
+import pandas as pd
+
+# Paths
+script_dir = os.getcwd()
+parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+layers_dir = parent_dir + '/layers/'
+country_dir = layers_dir + 'country/'
+globe_dir = layers_dir + 'globe/*.tif'
+globe_dir = glob.glob(globe_dir)
+soilp_dir = layers_dir + 'soilproperties/'
+bds_dir = soilp_dir + 'bulkdensity/THA/*.tif'
+cla_dir = soilp_dir + 'clay/THA/*.tif'
+org_dir = soilp_dir + 'organicsoil/THA/*.tif'
+san_dir = soilp_dir + 'sandfraction/THA/*.tif'
 
 
 class CountrySoilProperty(object):
@@ -70,12 +86,12 @@ class CountrySoilProperty(object):
         :param lon: longitude
         :param lat: latitude
         :param window_size: int - height and width of window. e.g. 3 means 3 by 3. Must be odd
-        :return: int value, the average or mean of the array or -99 if invalid
+        :return: float value, the average or mean of the array or -99 if invalid
         """
         array = self.slice_by_window(lon, lat, window_size)
         if array is None:
             return -99
-        return int(array.mean())
+        return round(array.mean(), 2)
 
     def slice_by_window(self, lon, lat, window_size):
         """
@@ -105,7 +121,82 @@ class CountrySoilProperty(object):
         return res
 
 
-url = "/home/eusoj/tmp/test.tif"
+def average_per_layer(dir_path, lon, lat, window_size):
+    """
 
-tha = CountrySoilProperty(url)
-print("Value: \n", tha.average_by_window(103.460, 12.420, 7))
+    :param dir_path:
+    :param lon:
+    :param lat:
+    :param window_size:
+    :return:
+    """
+    list_avg = []
+    dir_path = glob.glob(dir_path)
+
+    for tf in dir_path:
+        co = CountrySoilProperty(tf)
+        avg = co.average_by_window(lon, lat, window_size)
+        list_avg.append(avg)
+
+    return list_avg
+
+
+def average_per_type(dir_path, lon, lat, window_size):
+    """
+
+    :param dir_path:
+    :param lon:
+    :param lat:
+    :param window_size:
+    :return:
+    """
+    dict_avg = {}
+    for path in dir_path:
+        key = path.split('/')[-3]
+        list_avg = average_per_layer(path, lon, lat, window_size)
+
+        if key not in dict_avg:
+            dict_avg[key] = list_avg
+
+    return dict_avg
+
+
+def dict_to_df(dict_name):
+    """
+
+    :param dict_name:
+    :return:
+    """
+    return pd.DataFrame.from_dict(dict_name)
+
+
+def df_to_asc(dfname, outname):
+    """
+
+    :param dfname:
+    :return:
+    """
+    dfname.to_csv(outname, sep='\t', encoding='utf-8', index=False)
+
+# Main
+dir_types = [bds_dir, cla_dir, org_dir, san_dir]
+
+# you could change the lat long in the following:
+dict_summary = average_per_type(dir_types, 102.765, 13.369, 3)
+
+# make a dataframe
+df_summary = dict_to_df(dict_summary)
+
+# rename the indexes
+row_names = ['0cm', '10cm', '30cm', '60cm', '100cm', '200cm']
+df_summary.index = row_names
+
+# divide current bulk density values by 100
+df_summary['bulkdensity'] = round(df_summary['bulkdensity'] / 100, 2)
+df_summary = round(df_summary, 2)
+
+# export dataframe as csv
+ascfile = 'sample_asc.csv'
+df_to_asc(df_summary, ascfile)
+
+print(df_summary)
