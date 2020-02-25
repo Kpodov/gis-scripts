@@ -1,5 +1,6 @@
 import glob
 import os
+
 import gdal
 import osr
 import pandas as pd
@@ -16,6 +17,7 @@ bds_dir = soilp_dir + 'bulkdensity/THA/*.tif'
 cla_dir = soilp_dir + 'clay/THA/*.tif'
 org_dir = soilp_dir + 'organicsoil/THA/*.tif'
 san_dir = soilp_dir + 'sandfraction/THA/*.tif'
+dir_types = [bds_dir, cla_dir, org_dir, san_dir]
 
 
 class CountrySoilProperty(object):
@@ -178,25 +180,142 @@ def df_to_asc(dfname, outname):
     """
     dfname.to_csv(outname, sep='\t', encoding='utf-8', index=False)
 
-# Main
-dir_types = [bds_dir, cla_dir, org_dir, san_dir]
 
-# you could change the lat long in the following:
-dict_summary = average_per_type(dir_types, 102.765, 13.369, 3)
+def compute_pwp_row(col):
+    """
 
-# make a dataframe
-df_summary = dict_to_df(dict_summary)
+    :param col: pandas col
+    :return:
+    """
+    clay_val = col['clay']
+    oc_val = col['organicsoil']
+    sand_val = col['sandfraction']
 
-# rename the indexes
-row_names = ['0cm', '10cm', '30cm', '60cm', '100cm', '200cm']
-df_summary.index = row_names
+    return compute_pwp(clay_val, oc_val, sand_val)
 
-# divide current bulk density values by 100
-df_summary['bulkdensity'] = round(df_summary['bulkdensity'] / 100, 2)
-df_summary = round(df_summary, 2)
 
-# export dataframe as csv
-ascfile = 'sample_asc.csv'
-df_to_asc(df_summary, ascfile)
+def compute_pwp(clay_val, oc_val, sand_val):
+    """
+    Calculate permanent wilting point based on Clay, Organic Matter and sand value
+    :param clay_val: percentage of clay
+    :param oc_val: percentage of organic carbon
+    :param sand_val: percentage of sand
+    :return: a float value representing PWP
+    """
 
-print(df_summary)
+    # Step #1 - convert OC to OM
+    om_val = 2 * oc_val
+
+    # Step #2 - compute theta_1500_t
+    theta_1500_t = 0.031 - (0.024 * sand_val) + (0.487 * clay_val) + (0.006 * om_val) \
+                   + (0.005 * sand_val * om_val) - (0.013 * clay_val * om_val) + (0.068 * sand_val * clay_val)
+
+    # Step #3 - finally compute theta_1500
+    theta_1500 = (1.14 * theta_1500_t) - 0.02
+
+    return round(theta_1500)
+
+
+def compute_fc_row(col):
+    """
+
+    :param col: pandas col
+    :return:
+    """
+    clay_val = col['clay']
+    oc_val = col['organicsoil']
+    sand_val = col['sandfraction']
+
+    return compute_field_capacity(clay_val, oc_val, sand_val)
+
+
+def compute_field_capacity(clay_val, oc_val, sand_val):
+    """
+    Calculate Field Capacity based on Clay, Organic Matter and sand value
+    :param clay_val: percentage of clay
+    :param oc_val: percentage of organic carbon
+    :param sand_val: percentage of sand
+    :return: a float value representing FC
+    """
+
+    # Step #1 - convert OC to OM
+    om_val = 2 * oc_val
+
+    # Step #2 - compute theta_33_t
+    theta_33_t = 0.299 - (0.251 * sand_val) + (0.195 * clay_val) + (0.011 * om_val) \
+                 + (0.006 * sand_val * om_val) - (0.027 * clay_val * om_val) + (0.452 * sand_val * clay_val)
+
+    # Step #3 - compute actual F.C: theta_33
+    theta_33 = theta_33_t + ((1.283 * theta_33_t * theta_33_t) - (0.374 * theta_33_t) - 0.015)
+
+    return round(theta_33, 2)
+
+
+def compute_taw(fc, pwp, depth):
+    """
+    Compute total available water
+    :param fc: Field capacity
+    :param pwp: permanent wilting point
+    :param depth: depth of soil in mm
+    :return: a float value for TAW
+    """
+
+    return depth * (fc - pwp)
+
+
+def setup(lat, lon, window, depth=0):
+    """
+
+    :param lat: latitude
+    :param lon: longitude
+    :param window: window size. e.g. 3 means 3 by 3
+    :param depth: depth of soil in mm
+    :return: pandas dataframe
+    """
+    global dir_types
+
+    depth_values = [10, 90, 200, 300, 400, 1000]
+
+    if depth != 0:
+        depth_possible = [abs(x - 500) for x in depth_values]
+        min_diff = min(depth_possible)
+        min_index = depth_possible.index(min_diff)
+        depth = depth_values[min_index]
+
+    else:
+        depth = depth_values[0]
+
+    # you could change the lat long in the following:
+    dict_summary = average_per_type(dir_types, lat, lon, window)
+
+    # make a dataframe
+    df_summary = dict_to_df(dict_summary)
+
+    # rename the indexes
+    row_names = ['10mm', '100mm', '300mm', '600mm', '1000cm', '2000mm']
+    df_summary.index = row_names
+
+    # divide current bulk density values by 100
+    df_summary['bulkdensity'] = round(df_summary['bulkdensity'] / 100, 2)
+    df_summary = round(df_summary, 2)
+
+    # df_calc = pd.DataFrame(columns=['FC', 'PWP', 'TAW'], index=row_names)
+    # df_summary = df_summary.join(df_calc)
+
+    # df_summary['FC'] = df_summary.apply(compute_fc_row, axis=1)
+    # df_summary['PWP'] = df_summary.apply(compute_pwp_row, axis=1)
+
+    # export dataframe as csv
+    # ascfile = 'sample_asc.csv'
+    # df_to_asc(df_summary, ascfile)
+
+    print(df_summary)
+    print(depth)
+
+
+def main():
+    setup(102.765, 13.369, 3, 200)
+
+
+if __name__ == '__main__':
+    main()
