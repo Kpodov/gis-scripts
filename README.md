@@ -1,7 +1,8 @@
 # gis-scripts
 This project will contain most of my general purposes Python or R scripts realted to GIS stuff.
 
-First steps:
+* Project **proj-lstfd20**:
+
 1. Downlaod this project 
 2. Downlaod [layers.zip](https://www.dropbox.com/s/74hpv9d56a8s461/layers.zip?dl=0)
 3. Unzip layers.zip
