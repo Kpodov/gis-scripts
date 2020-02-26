@@ -205,6 +205,9 @@ def compute_pwp(clay_val, oc_val, sand_val):
 
     # Step #1 - convert OC to OM
     om_val = 2 * oc_val
+    om_val /= 1000
+    clay_val /= 100
+    sand_val /= 100
 
     # Step #2 - compute theta_1500_t
     theta_1500_t = 0.031 - (0.024 * sand_val) + (0.487 * clay_val) + (0.006 * om_val) \
@@ -213,7 +216,7 @@ def compute_pwp(clay_val, oc_val, sand_val):
     # Step #3 - finally compute theta_1500
     theta_1500 = (1.14 * theta_1500_t) - 0.02
 
-    return round(theta_1500)
+    return round(theta_1500, 2)
 
 
 def compute_fc_row(col):
@@ -240,6 +243,9 @@ def compute_field_capacity(clay_val, oc_val, sand_val):
 
     # Step #1 - convert OC to OM
     om_val = 2 * oc_val
+    om_val /= 1000
+    clay_val /= 100
+    sand_val /= 100
 
     # Step #2 - compute theta_33_t
     theta_33_t = 0.299 - (0.251 * sand_val) + (0.195 * clay_val) + (0.011 * om_val) \
@@ -302,8 +308,8 @@ def setup(lat, lon, window, depth=0):
     # df_calc = pd.DataFrame(columns=['FC', 'PWP', 'TAW'], index=row_names)
     # df_summary = df_summary.join(df_calc)
 
-    # df_summary['FC'] = df_summary.apply(compute_fc_row, axis=1)
-    # df_summary['PWP'] = df_summary.apply(compute_pwp_row, axis=1)
+    df_summary['FC'] = df_summary.apply(compute_fc_row, axis=1)
+    df_summary['PWP'] = df_summary.apply(compute_pwp_row, axis=1)
 
     # export dataframe as csv
     # ascfile = 'sample_asc.csv'
