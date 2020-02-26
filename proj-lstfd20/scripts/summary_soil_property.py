@@ -269,6 +269,18 @@ def compute_taw(fc, pwp, depth):
     return depth * (fc - pwp)
 
 
+def compute_taw_row(row, depth):
+    """
+
+    :param row:
+    :param depth:
+    :return:
+    """
+    fc = row['FC']
+    pwp = row['PWP']
+    return compute_taw(fc, pwp, depth)
+
+
 def setup(lat, lon, window, depth=0):
     """
 
@@ -279,17 +291,23 @@ def setup(lat, lon, window, depth=0):
     :return: pandas dataframe
     """
     global dir_types
+    outname = 'taw-' + str(lat) + '-' + str(lon) + '-'  + str(depth) + 'mm.csv'
 
     depth_values = [10, 90, 200, 300, 400, 1000]
+    row_names = ['10mm', '90mm', '200mm', '300mm', '400mm', '1000mm']
+    layer_oi = ''
 
-    if depth != 0:
+    if depth not in depth_values:
         depth_possible = [abs(x - 500) for x in depth_values]
         min_diff = min(depth_possible)
         min_index = depth_possible.index(min_diff)
         depth = depth_values[min_index]
+        layer_oi = row_names[min_index]
 
     else:
-        depth = depth_values[0]
+        # depth = depth_values[0]
+        layer_oi = str(depth) + 'mm'
+        # layer_oi = depth_values[depth_values.index(depth)]
 
     # you could change the lat long in the following:
     dict_summary = average_per_type(dir_types, lat, lon, window)
@@ -298,29 +316,72 @@ def setup(lat, lon, window, depth=0):
     df_summary = dict_to_df(dict_summary)
 
     # rename the indexes
-    row_names = ['10mm', '100mm', '300mm', '600mm', '1000cm', '2000mm']
+    # row_names = ['10mm', '100mm', '300mm', '600mm', '1000cm', '2000mm']
+    # df_summary.index = row_names
     df_summary.index = row_names
 
     # divide current bulk density values by 100
     df_summary['bulkdensity'] = round(df_summary['bulkdensity'] / 100, 2)
     df_summary = round(df_summary, 2)
 
-    # df_calc = pd.DataFrame(columns=['FC', 'PWP', 'TAW'], index=row_names)
-    # df_summary = df_summary.join(df_calc)
-
     df_summary['FC'] = df_summary.apply(compute_fc_row, axis=1)
     df_summary['PWP'] = df_summary.apply(compute_pwp_row, axis=1)
+    df_summary['TAW'] = df_summary.apply(lambda x: compute_taw_row(x, depth), axis=1)
 
     # export dataframe as csv
     # ascfile = 'sample_asc.csv'
     # df_to_asc(df_summary, ascfile)
 
-    print(df_summary)
-    print(depth)
+    taw_val = df_summary.loc[layer_oi, 'TAW']
+    taw_val = round(taw_val, 2)
+    taw_dict = {"Code": [1], "Soil": ["Sandy_Loam"], 'Total_Available_Water(mm)': [taw_val]}
+    taw_data = pd.DataFrame.from_dict(taw_dict)
+
+    df_to_asc(taw_data, outname)
+
+    # print(df_summary)
+    # print(taw_data)
+    # print(layer_oi, df_summary.loc[layer_oi, 'TAW'])
+    return outname
 
 
 def main():
-    setup(102.765, 13.369, 3, 200)
+    # setup(102.765, 13.369, 3, 600)
+    while True:
+        prompt = input("Enter 'R' to restart or 'Q' to quit: ")
+        print()
+        if prompt.lower() == 'r':
+            while True:
+                try:
+                    lat = float(input("Enter latitude: "))
+                    lon = float(input("Enter longitude: "))
+                    window = int(input("Enter window size (e.g. enter '3' for 3x3): "))
+                    depth = int(input("Enter soil depth: "))
+
+                except ValueError:
+                    print('Invalid key. Please enter a numerical value')
+                    continue
+
+                outname = setup(lat, lon, window, depth)
+                print('Check directory for the following file: ', outname)
+
+                setup_prompt = input('Would you like to make a new simulation? (y or n): ')
+
+                if setup_prompt.lower() == 'y':
+                    continue
+                elif setup_prompt.lower() == 'n':
+                    break
+                else:
+                    print('Got invalid response. Restarting...')
+
+        elif prompt.lower() == 'q':
+            break
+        else:
+            prompt = input("Sorry, invalid key... Please enter 'R' to restart or 'Q' to quit: ")
+            print()
+            continue
+
+    print('Bye')
 
 
 if __name__ == '__main__':
