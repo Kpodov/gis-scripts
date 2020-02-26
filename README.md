@@ -1,6 +1,13 @@
 # gis-scripts
 This project will contain most of my general purposes Python or R scripts realted to GIS stuff.
 
+The scripts require a virtual env:
+```
+conda create -n gis-scripts_env python=3.7
+conda activate scripts_env
+pip freeze > requirements.txt
+```
+
 ## Project **proj-lstfd20**:
 
 1. Downlaod this [project](https://github.com/eusojk/gis-scripts/archive/master.zip) 
