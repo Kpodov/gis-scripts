@@ -1,5 +1,6 @@
 import glob
 import os
+from pathlib import Path
 
 import gdal
 import osr
@@ -291,7 +292,7 @@ def setup(lat, lon, window, depth=0):
     :return: pandas dataframe
     """
     global dir_types
-    outname = 'taw-' + str(lat) + '-' + str(lon) + '-'  + str(depth) + 'mm.csv'
+    outname = 'taw-' + str(lat) + '-' + str(lon) + '-' + str(depth) + 'mm.csv'
 
     depth_values = [10, 90, 200, 300, 400, 1000]
     row_names = ['10mm', '90mm', '200mm', '300mm', '400mm', '1000mm']
@@ -347,8 +348,12 @@ def setup(lat, lon, window, depth=0):
 
 def main():
     # setup(102.765, 13.369, 3, 600)
-    while True:
-        prompt = input("Enter 'R' to restart or 'Q' to quit: ")
+
+    # Check if the soil properties directory is present before running
+    layers_dir_path = Path(layers_dir)
+    layers_dir_present = layers_dir_path.exists()
+    while layers_dir_present:
+        prompt = input("Enter 'R' to (re)start or 'Q' to quit: ")
         print()
         if prompt.lower() == 'r':
             while True:
@@ -375,13 +380,14 @@ def main():
                     print('Got invalid response. Restarting...')
 
         elif prompt.lower() == 'q':
+            print('Exiting...')
             break
         else:
-            prompt = input("Sorry, invalid key... Please enter 'R' to restart or 'Q' to quit: ")
-            print()
+            print("Sorry, invalid key... \n")
             continue
-
-    print('Bye')
+    else:
+        print(
+            "\n The 'layers' directory is missing. Please download the zip file and place it in your project directory.")
 
 
 if __name__ == '__main__':
