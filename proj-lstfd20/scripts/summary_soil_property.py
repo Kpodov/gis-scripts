@@ -349,6 +349,10 @@ def setup(lat, lon, window, depth=0):
 def main():
     # setup(102.765, 13.369, 3, 600)
 
+    print(
+        "\nThis script is currently only supporting Thailand. Using geo coordinates not associated with this country "
+        "will give misleading results!\n")
+
     # Check if the soil properties directory is present before running
     layers_dir_path = Path(layers_dir)
     layers_dir_present = layers_dir_path.exists()
