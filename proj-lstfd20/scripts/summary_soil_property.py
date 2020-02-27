@@ -282,17 +282,17 @@ def compute_taw_row(row, depth):
     return compute_taw(fc, pwp, depth)
 
 
-def setup(lat, lon, window, depth=0):
+def setup(lon, lat, window, depth=0):
     """
 
-    :param lat: latitude
     :param lon: longitude
+    :param lat: latitude
     :param window: window size. e.g. 3 means 3 by 3
     :param depth: depth of soil in mm
     :return: pandas dataframe
     """
     global dir_types
-    outname = 'taw-' + str(lat) + '-' + str(lon) + '-' + str(depth) + 'mm.csv'
+    outname = 'taw-' + str(lon) + '-' + str(lat) + '-' + str(depth) + 'mm.csv'
 
     depth_values = [10, 90, 200, 300, 400, 1000]
     row_names = ['10mm', '90mm', '200mm', '300mm', '400mm', '1000mm']
@@ -311,7 +311,7 @@ def setup(lat, lon, window, depth=0):
         # layer_oi = depth_values[depth_values.index(depth)]
 
     # you could change the lat long in the following:
-    dict_summary = average_per_type(dir_types, lat, lon, window)
+    dict_summary = average_per_type(dir_types, lon, lat, window)
 
     # make a dataframe
     df_summary = dict_to_df(dict_summary)
@@ -362,16 +362,16 @@ def main():
         if prompt.lower() == 'r':
             while True:
                 try:
-                    lat = float(input("Enter latitude: "))
                     lon = float(input("Enter longitude: "))
+                    lat = float(input("Enter latitude: "))
                     window = int(input("Enter window size (e.g. enter '3' for 3x3): "))
-                    depth = int(input("Enter soil depth: "))
+                    depth = int(input("Enter soil depth (mm): "))
 
                 except ValueError:
                     print('Invalid key. Please enter a numerical value')
                     continue
 
-                outname = setup(lat, lon, window, depth)
+                outname = setup(lon, lat, window, depth)
                 print('Check directory for the following file: ', outname)
 
                 setup_prompt = input('Would you like to make a new simulation? (y or n): ')
