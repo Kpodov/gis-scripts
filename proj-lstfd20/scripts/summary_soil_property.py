@@ -91,6 +91,9 @@ class CountrySoilProperty(object):
         :param window_size: int - height and width of window. e.g. 3 means 3 by 3. Must be odd
         :return: float value, the average or mean of the array or -99 if invalid
         """
+        if self.get_band_value(lon, lat) == 255: # disregard any value from the sea
+            return - 99
+
         array = self.slice_by_window(lon, lat, window_size)
         if array is None:
             return -99
@@ -139,6 +142,8 @@ def average_per_layer(dir_path, lon, lat, window_size):
     for tf in dir_path:
         co = CountrySoilProperty(tf)
         avg = co.average_by_window(lon, lat, window_size)
+        if avg == -99:
+            return -99
         list_avg.append(avg)
 
     return list_avg
@@ -157,6 +162,9 @@ def average_per_type(dir_path, lon, lat, window_size):
     for path in dir_path:
         key = path.split('/')[-3]
         list_avg = average_per_layer(path, lon, lat, window_size)
+
+        if list_avg == -99:
+            return -99
 
         if key not in dict_avg:
             dict_avg[key] = list_avg
@@ -292,14 +300,19 @@ def setup(lon, lat, window, depth=0):
     :param lat: latitude
     :param window: window size. e.g. 3 means 3 by 3
     :param depth: depth of soil in mm
-    :return: pandas dataframe
+    :return: a text file or -99
     """
     global dir_types
+
+    # you could change the lat long in the following:
+    dict_summary = average_per_type(dir_types, lon, lat, window)
+    if dict_summary == -99:
+        return -99
+
     outname = 'taw-' + str(lon) + '-' + str(lat) + '-' + str(depth) + 'mm.csv'
 
     depth_values = [10, 90, 200, 300, 400, 1000]
     row_names = ['10mm', '90mm', '200mm', '300mm', '400mm', '1000mm']
-    layer_oi = ''
     frac_values = []
     depth_closest = depth
     index_closest = 0
@@ -312,13 +325,12 @@ def setup(lon, lat, window, depth=0):
         index_closest = depth_possible.index(min_diff)
         depth_closest = depth_values[index_closest]
         depth_diff = abs(depth - depth_closest)
-
         actual_frac = depth_diff / depth_values[index_closest]
-        layer_oi = row_names[index_closest]
+
 
     else: # depth given is available
         # depth = depth_values[0]
-        layer_oi = str(depth) + 'mm'
+        # layer_oi = str(depth) + 'mm'
         index_closest = depth_values.index(depth)
 
     # compute the fractions needed for computing TAW
@@ -331,14 +343,11 @@ def setup(lon, lat, window, depth=0):
             frac = 0
         frac_values.append(frac)
 
-    # you could change the lat long in the following:
-    dict_summary = average_per_type(dir_types, lon, lat, window)
-
     # make a dataframe
     df_summary = dict_to_df(dict_summary)
 
     # rename the indexes
-    df_summary.index = row_names
+    # df_summary.index = row_names
     df_summary.insert(0, 'depths', depth_values)
 
     # divide current bulk density values by 100
@@ -360,61 +369,65 @@ def setup(lon, lat, window, depth=0):
     taw_dict = {"Code": [1], "Soil": ["Sandy_Loam"], 'Total_Available_Water(mm)': [taw_val]}
     taw_data = pd.DataFrame.from_dict(taw_dict)
 
-    # df_to_asc(taw_data, outname)
+    # export df as a txt/csv file
+    df_to_asc(taw_data, outname)
 
-    print(df_summary)
-    print("TAW final for a depth of {} mm is: {}".format(depth, taw_val))
+    # print(df_summary)
+    # print("TAW final for a depth of {} mm is: {}".format(depth, taw_val))
     # print(taw_data)
     # print(layer_oi, df_summary.loc[layer_oi, 'TAW'])
     return outname
 
 
 def main():
-    setup(102.765, 13.369, 3, 1000)
+    # setup(102.765, 13.369, 3, 1000)
 
-    # print(
-    #     "\nThis script is currently only supporting Thailand. Using geo coordinates not associated with this country "
-    #     "will give misleading results!\n")
-    #
-    # # Check if the soil properties directory is present before running
-    # layers_dir_path = Path(layers_dir)
-    # layers_dir_present = layers_dir_path.exists()
-    # while layers_dir_present:
-    #     prompt = input("Enter 'R' to (re)start or 'Q' to quit: ")
-    #     print()
-    #     if prompt.lower() == 'r':
-    #         while True:
-    #             try:
-    #                 lon = float(input("Enter longitude: "))
-    #                 lat = float(input("Enter latitude: "))
-    #                 window = int(input("Enter window size (e.g. enter '3' for 3x3): "))
-    #                 depth = int(input("Enter soil depth (mm): "))
-    #
-    #             except ValueError:
-    #                 print('Invalid key. Please enter a numerical value')
-    #                 continue
-    #
-    #             outname = setup(lon, lat, window, depth)
-    #             print('Check directory for the following file: ', outname)
-    #
-    #             setup_prompt = input('Would you like to make a new simulation? (y or n): ')
-    #
-    #             if setup_prompt.lower() == 'y':
-    #                 continue
-    #             elif setup_prompt.lower() == 'n':
-    #                 break
-    #             else:
-    #                 print('Got invalid response. Restarting...')
-    #
-    #     elif prompt.lower() == 'q':
-    #         print('Exiting...')
-    #         break
-    #     else:
-    #         print("Sorry, invalid key... \n")
-    #         continue
-    # else:
-    #     print(
-    #         "\n The 'layers' directory is missing. Please download the zip file and place it in your project directory.")
+    print(
+        "\nThis script is currently only supporting Thailand. Using geo coordinates not associated with this country "
+        "will give misleading results!\n")
+
+    # Check if the soil properties directory is present before running
+    layers_dir_path = Path(layers_dir)
+    layers_dir_present = layers_dir_path.exists()
+    while layers_dir_present:
+        prompt = input("Enter 'R' to (re)start or 'Q' to quit: ")
+        print()
+        if prompt.lower() == 'r':
+            while True:
+                try:
+                    lon = float(input("Enter longitude: "))
+                    lat = float(input("Enter latitude: "))
+                    window = int(input("Enter window size (e.g. enter '3' for 3x3): "))
+                    depth = int(input("Enter soil depth (mm): "))
+
+                except ValueError:
+                    print('Invalid key. Please enter a numerical value')
+                    continue
+
+                outname = setup(lon, lat, window, depth)
+                if outname == -99:
+                    print("\nInvalid location. This lon({}) and lat({}) is definitely in the sea.".format(lon, lat))
+                else:
+                    print('Check directory for the following file: ', outname)
+
+                setup_prompt = input('\nWould you like to make a new simulation? (y or n): ')
+
+                if setup_prompt.lower() == 'y':
+                    continue
+                elif setup_prompt.lower() == 'n':
+                    break
+                else:
+                    print('Got invalid response. Restarting...')
+
+        elif prompt.lower() == 'q':
+            print('Exiting...')
+            break
+        else:
+            print("Sorry, invalid key... \n")
+            continue
+    else:
+        print(
+            "\n The 'layers' directory is missing. Please download the zip file and place it in your project directory.")
 
 
 if __name__ == '__main__':
