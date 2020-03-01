@@ -1,5 +1,5 @@
 # gis-scripts
-This project will contain most of my general purposes Python or R scripts realted to GIS stuff.
+This project will contain most of my general purposes Python or R scripts related to GIS stuff.
 
 The scripts require a virtual env:
 ```
