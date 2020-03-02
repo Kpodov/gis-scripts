@@ -17,22 +17,29 @@ This script is optimized only for **Thailand** as of now. Follow the steps to ge
 3. Unzip layers.zip
 4. Copy 'layers' directory into the 'proj-lstfd20' directory
 5. 'proj-lstfd20' should only have two directories now
-6. Run summary_soil_property.py from proj-lstfd20/scripts/ 
+6. Run summary_soil_property.py from your env
 7. Please disregard any warning about "pj_obj_create*"
 
+Usage:
+> summary_soil_property.py [-h] --lon LON --lat LAT --win WIN --depth DEPTH
+
 Example of simulation:
-> $ (gis-scripts_env) python summary_soil_property.py
+> $ (gis-scripts_env) python path/to/summary_soil_property.py --lon=103.84 --lat=15.76 --win=3 --depth=350
 >
->This script is currently only supporting Thailand. Using geo coordinates not associated with this country will give misleading results!
+>Check directory for the following file: path/to//scripts/outputs/taw-103.84-15.76-350mm.csv
 
-> Enter 'R' to (re)start or 'Q' to quit: R
+To get help, please run:
+> $ (gis-scripts_env) python path/to/summary_soil_property.py -h
+>
+> This script interpolates TAW value for a specific location in Thailand
+> optional arguments:
+>   -h, --help     show this help message and exit
+>
+>  --lon LON      longitude value, e.g. 103.98
+>
+>  --lat LAT      latitude value, e.g. 15.88
+>
+>  --win WIN      window size, e.g. enter '3' for a window size of 3x3
+>
+>  --depth DEPTH  depth value in mm, e.g. 350
 
-> Enter longitude: 102.765
->
-> Enter latitude: 13.369
->
-> Enter window size (e.g. enter '3' for 3x3): 3
->
-> Enter soil depth (mm): 100
->
-> Check directory for the following file:  taw-102.765-13.369-100mm.csv
