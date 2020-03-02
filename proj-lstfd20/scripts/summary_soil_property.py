@@ -1,5 +1,7 @@
+import argparse
 import glob
 import os
+import sys
 from pathlib import Path
 
 import gdal
@@ -8,17 +10,18 @@ import pandas as pd
 
 # Paths
 script_dir = os.getcwd()
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
-layers_dir = parent_dir + '/layers/'
-country_dir = layers_dir + 'country/'
-globe_dir = layers_dir + 'globe/*.tif'
-globe_dir = glob.glob(globe_dir)
-soilp_dir = layers_dir + 'soilproperties/'
-bds_dir = soilp_dir + 'bulkdensity/THA/*.tif'
-cla_dir = soilp_dir + 'clay/THA/*.tif'
-org_dir = soilp_dir + 'organicsoil/THA/*.tif'
-san_dir = soilp_dir + 'sandfraction/THA/*.tif'
-dir_types = [bds_dir, cla_dir, org_dir, san_dir]
+outputs = ''
+parent_dir = ""
+layers_dir = ""
+country_dir = ""
+globe_dir = ""
+globe_dir = ""
+soilp_dir = ""
+bds_dir = ""
+cla_dir = ""
+org_dir = ""
+san_dir = ""
+dir_types = ""
 
 
 class CountrySoilProperty(object):
@@ -91,7 +94,7 @@ class CountrySoilProperty(object):
         :param window_size: int - height and width of window. e.g. 3 means 3 by 3. Must be odd
         :return: float value, the average or mean of the array or -99 if invalid
         """
-        if self.get_band_value(lon, lat) == 255: # disregard any value from the sea
+        if self.get_band_value(lon, lat) == 255:  # disregard any value from the sea
             return - 99
 
         array = self.slice_by_window(lon, lat, window_size)
@@ -125,6 +128,33 @@ class CountrySoilProperty(object):
         if res.shape[0] * res.shape[1] != window_size * window_size:
             return
         return res
+
+
+def ini_dir(script_path):
+    """
+    Initializes important paths
+    :param script_path: the abs pathname of the script
+    :return: None
+    """
+    global script_dir, outputs, parent_dir, layers_dir, country_dir, globe_dir, soilp_dir, \
+        bds_dir, cla_dir, org_dir, san_dir, dir_types
+    script_dir = os.path.abspath(script_path)
+
+    script_dir = os.path.dirname(script_path)
+    parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+    layers_dir = parent_dir + '/layers/'
+    country_dir = layers_dir + 'country/'
+    globe_dir = layers_dir + 'globe/*.tif'
+    globe_dir = glob.glob(globe_dir)
+    soilp_dir = layers_dir + 'soilproperties/'
+    bds_dir = soilp_dir + 'bulkdensity/THA/*.tif'
+    cla_dir = soilp_dir + 'clay/THA/*.tif'
+    org_dir = soilp_dir + 'organicsoil/THA/*.tif'
+    san_dir = soilp_dir + 'sandfraction/THA/*.tif'
+    dir_types = [bds_dir, cla_dir, org_dir, san_dir]
+    outputs = script_dir + '/outputs/'
+
+    # print(dir_types)
 
 
 def average_per_layer(dir_path, lon, lat, window_size):
@@ -302,13 +332,14 @@ def setup(lon, lat, window, depth=0):
     :param depth: depth of soil in mm
     :return: a text file or -99
     """
-    global dir_types
-
+    global outputs, dir_types
+    os.chdir(outputs)
     # you could change the lat long in the following:
     dict_summary = average_per_type(dir_types, lon, lat, window)
     if dict_summary == -99:
         return -99
 
+    # outname = outputs
     outname = 'taw-' + str(lon) + '-' + str(lat) + '-' + str(depth) + 'mm.csv'
 
     depth_values = [10, 90, 200, 300, 400, 1000]
@@ -327,8 +358,7 @@ def setup(lon, lat, window, depth=0):
         depth_diff = abs(depth - depth_closest)
         actual_frac = depth_diff / depth_values[index_closest]
 
-
-    else: # depth given is available
+    else:  # depth given is available
         # depth = depth_values[0]
         # layer_oi = str(depth) + 'mm'
         index_closest = depth_values.index(depth)
@@ -376,10 +406,15 @@ def setup(lon, lat, window, depth=0):
     # print("TAW final for a depth of {} mm is: {}".format(depth, taw_val))
     # print(taw_data)
     # print(layer_oi, df_summary.loc[layer_oi, 'TAW'])
-    return outname
+    out_path = os.path.abspath(outname)
+    return out_path
 
 
-def main():
+def interactive_run():
+    # Check that all necessary files are present
+    script_path = sys.argv[0]
+    ini_dir(script_path)
+
     # setup(102.765, 13.369, 3, 1000)
 
     print(
@@ -430,5 +465,29 @@ def main():
             "\n The 'layers' directory is missing. Please download the zip file and place it in your project directory.")
 
 
+def main():
+    # Check that all necessary files are present
+    script_path = sys.argv[0]
+    ini_dir(script_path)
+
+    # parse the given arguments
+    parser = argparse.ArgumentParser(
+        description="This script interpolates TAW value for a specific location in Thailand"
+    )
+    parser.add_argument("--lon", type=float, required=True, help="longitude value, e.g. 103.98")
+    parser.add_argument("--lat", type=float, required=True, help="latitude value, e.g. 15.88")
+    parser.add_argument("--win", type=int, required=True, help="window size, e.g. enter '3' for a window size "
+                                                               "of 3x3")
+    parser.add_argument("--depth", type=int, required=True, help="depth value in mm, e.g. 350")
+
+    args = vars(parser.parse_args())
+    outname = setup(args["lon"], args["lat"], args["win"], args["depth"])
+    if outname == -99:
+        print("\nInvalid location. This lon({}) and lat({}) is definitely in the sea.".format(args["lon"], args["lat"]))
+    else:
+        print('Check directory for the following file: ', outname)
+
+
 if __name__ == '__main__':
     main()
+    # interactive_run()
