@@ -26,13 +26,14 @@ Usage:
 Example of simulation:
 > $ (gis-scripts_env) python path/to/summary_soil_property.py --lon=103.84 --lat=15.76 --win=3 --depth=350
 >
->Check directory for the following file: path/to//scripts/outputs/taw-103.84-15.76-350mm.csv
+>Check directory for the following file: path/to/scripts/outputs/taw-103.84-15.76-350mm.csv
 
 To get help, please run:
 > $ (gis-scripts_env) python path/to/summary_soil_property.py -h
 >
 > This script interpolates TAW value for a specific location in Thailand
-> optional arguments:
+>
+>   optional arguments:
 >   -h, --help     show this help message and exit
 >
 >  --lon LON      longitude value, e.g. 103.98
